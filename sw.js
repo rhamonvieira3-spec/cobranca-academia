@@ -1,5 +1,5 @@
-const CACHE = 'cobranca-v1';
-const FILES = ['./', './index.html', './manifest.json', './icon.svg'];
+const CACHE = 'cobranca-v2';
+const FILES = ['./', './index.html', './manifest.json', './icon.svg', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))));
 self.addEventListener('fetch', e => {
