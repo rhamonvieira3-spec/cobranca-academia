@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cobrança Academia</title>
+<meta name="theme-color" content="#16a34a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #111827; --muted: #6b7280; --line: #e5e7eb;
+    --accent: #16a34a; --accent-soft: #dcfce7; --danger: #dc2626; --danger-soft: #fee2e2;
+    --warn: #d97706; --warn-soft: #fef3c7; --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b0f14; --card: #151b23; --text: #f3f4f6; --muted: #9ca3af; --line: #263040;
+      --accent: #22c55e; --accent-soft: #12321f; --danger: #f87171; --danger-soft: #3a1717;
+      --warn: #fbbf24; --warn-soft: #3a2c0c;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  header { padding: calc(20px + env(safe-area-inset-top)) 16px 8px; max-width: 640px; margin: 0 auto; }
+  header h1 { font-size: 28px; margin: 0; letter-spacing: -0.02em; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+  main { max-width: 640px; margin: 0 auto; padding: 8px 16px 24px; }
+  .view { display: none; } .view.on { display: block; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .summary .card { margin: 0; }
+  .big { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .label { color: var(--muted); font-size: 14px; }
+  .section-title { font-size: 15px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 20px 4px 8px; }
+
+  .student { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; flex: none; }
+  .student.late .avatar { background: var(--danger-soft); color: var(--danger); }
+  .student .info { flex: 1; min-width: 0; }
+  .student .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .student .meta { color: var(--muted); font-size: 14px; }
+  .tag { display: inline-block; font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .tag.late { background: var(--danger-soft); color: var(--danger); }
+  .tag.soon { background: var(--warn-soft); color: var(--warn); }
+  .tag.ok { background: var(--accent-soft); color: var(--accent); }
+
+  button { font: inherit; cursor: pointer; border: 0; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; border-radius: 14px; font-weight: 600; font-size: 17px; padding: 0 18px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .btn-danger { background: var(--danger-soft); color: var(--danger); }
+  .btn-small { min-height: 40px; width: auto; font-size: 15px; padding: 0 14px; border-radius: 12px; }
+  .row { display: flex; gap: 10px; } .row > * { flex: 1; }
+
+  .empty { text-align: center; color: var(--muted); padding: 32px 16px; }
+  .empty .emoji { font-size: 40px; }
+
+  input, select, textarea {
+    font: inherit; width: 100%; min-height: 52px; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+  }
+  textarea { min-height: 170px; resize: vertical; line-height: 1.45; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  .field { margin-bottom: 14px; } .field label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .field small { color: var(--muted); display: block; margin-top: 4px; font-size: 13px; }
+  .check { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; font-weight: 500; }
+  .check input { width: 24px; height: 24px; min-height: 0; accent-color: var(--accent); flex: none; }
+  .search { margin-bottom: 12px; }
+
+  nav.tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center;
+    background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); z-index: 5;
+  }
+  nav.tabs .inner { display: flex; width: 100%; max-width: 640px; }
+  nav.tabs button { flex: 1; background: none; color: var(--muted); padding: 10px 0 12px; font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  nav.tabs button .ic { font-size: 22px; line-height: 1; }
+  nav.tabs button.on { color: var(--accent); }
+
+  .fab { position: fixed; right: 20px; bottom: calc(96px + env(safe-area-inset-bottom)); width: 60px; height: 60px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 32px; box-shadow: 0 6px 20px rgba(0,0,0,.18); z-index: 6; display: none; }
+  .fab.on { display: block; }
+
+  /* Sheet (modal) */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; z-index: 10; align-items: flex-end; justify-content: center; }
+  .sheet-bg.on { display: flex; }
+  .sheet { background: var(--bg); width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .sheet h2 { margin: 0 0 16px; font-size: 22px; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .sheet-head h2 { margin: 0; }
+  .x { background: var(--line); color: var(--text); width: 36px; height: 36px; border-radius: 50%; font-size: 18px; }
+
+  .tones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .tone { background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 12px; text-align: left; color: var(--text); }
+  .tone b { display: block; font-size: 16px; } .tone span { font-size: 13px; color: var(--muted); }
+  .tone.on { border-color: var(--accent); background: var(--accent-soft); }
+
+  .progress { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin: 8px 0 18px; }
+  .progress div { height: 100%; background: var(--accent); transition: width .3s; }
+  .preview { white-space: pre-wrap; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; font-size: 15px; margin-bottom: 14px; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 12px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; max-width: calc(100% - 32px); text-align: center; }
+  .toast.on { opacity: 1; }
+  .detail-line { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .detail-line:last-child { border-bottom: 0; }
+  .detail-line span:first-child { color: var(--muted); }
+  .stack > * + * { margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="gymName">Minha Academia</h1>
+  <p id="today"></p>
+</header>
+
+<main>
+  <!-- INÍCIO -->
+  <section class="view on" id="v-home">
+    <div class="summary">
+      <div class="card"><div class="label">Devendo</div><div class="big" id="sumLateCount">0</div></div>
+      <div class="card"><div class="label">Total em atraso</div><div class="big" id="sumLateValue">R$ 0</div></div>
+    </div>
+    <button class="btn btn-primary" id="btnCobrarTodos">💬 Cobrar todos que estão devendo</button>
+    <div class="section-title">Estão devendo</div>
+    <div id="lateList"></div>
+    <div class="section-title">Vencem nos próximos 5 dias</div>
+    <div id="soonList"></div>
+  </section>
+
+  <!-- ALUNOS -->
+  <section class="view" id="v-students">
+    <input class="search" id="search" type="search" placeholder="🔎  Buscar aluno">
+    <div id="allList"></div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section class="view" id="v-settings">
+    <div class="card">
+      <div class="field"><label>Nome da academia</label><input id="setGym" placeholder="Ex: Academia Força Total"></div>
+      <div class="field"><label>Chave Pix (opcional)</label><input id="setPix" placeholder="CPF, telefone, e-mail ou chave aleatória"><small>Se preencher, a chave vai junto nas mensagens de cobrança.</small></div>
+      <div class="field"><label>Código do país (WhatsApp)</label>
+        <select id="setDdi"><option value="55">🇧🇷 Brasil (+55)</option><option value="351">🇵🇹 Portugal (+351)</option></select>
+      </div>
+      <button class="btn btn-primary" id="btnSaveSettings">Salvar</button>
+    </div>
+    <div class="section-title">Cópia de segurança</div>
+    <div class="card stack">
+      <p class="label" style="margin:0">Os dados ficam guardados neste celular. Faça uma cópia de vez em quando para não perder nada se trocar de aparelho.</p>
+      <button class="btn btn-ghost" id="btnExport">⬇️ Salvar cópia dos alunos</button>
+      <button class="btn btn-ghost" id="btnImport">⬆️ Restaurar cópia</button>
+      <input type="file" id="fileImport" accept="application/json,.json" hidden>
+    </div>
+  </section>
+</main>
+
+<button class="fab" id="fab" aria-label="Adicionar aluno">+</button>
+
+<nav class="tabs"><div class="inner">
+  <button class="on" data-tab="home"><span class="ic">🏠</span>Início</button>
+  <button data-tab="students"><span class="ic">👥</span>Alunos</button>
+  <button data-tab="settings"><span class="ic">⚙️</span>Ajustes</button>
+</div></nav>
+
+<!-- SHEET -->
+<div class="sheet-bg" id="sheetBg"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ DADOS ============ */
+const KEY = 'cobranca-academia-v1';
+const defaults = { gym: 'Minha Academia', pix: '', ddi: '55', students: [] };
+let db;
+try { db = Object.assign({}, defaults, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { db = { ...defaults }; }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { toast('Não foi possível salvar neste aparelho'); } }
+
+/* ============ DATAS ============ */
+const pad = n => String(n).padStart(2, '0');
+const ym = d => d.getFullYear() + '-' + pad(d.getMonth() + 1);           // "2026-11"
+const ymAdd = (s, k) => { const [y, m] = s.split('-').map(Number); const d = new Date(y, m - 1 + k, 1); return ym(d); };
+const daysIn = (y, m) => new Date(y, m, 0).getDate();
+function dueDate(monthStr, day) { const [y, m] = monthStr.split('-').map(Number); return new Date(y, m - 1, Math.min(day, daysIn(y, m))); }
+function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+const fmtDate = s => { if (!s) return '—'; const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; };
+const monthName = s => { const [y, m] = s.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long' }); };
+const money = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+/* Situação do aluno: quais meses estão em aberto e vencidos */
+function status(s) {
+  const today = startOfToday();
+  const lateMonths = [];
+  let m = ymAdd(s.paidUntil, 1);
+  const cur = ym(today);
+  while (m <= cur) {
+    if (dueDate(m, s.day) < today) lateMonths.push(m);
+    m = ymAdd(m, 1);
+  }
+  const nextMonth = ymAdd(s.paidUntil, 1);
+  const nextDue = dueDate(nextMonth, s.day);
+  const daysToDue = Math.round((nextDue - today) / 86400000);
+  return {
+    late: lateMonths.length > 0,
+    lateMonths,
+    owed: lateMonths.length * Number(s.value),
+    daysLate: lateMonths.length ? Math.round((today - dueDate(lateMonths[0], s.day)) / 86400000) : 0,
+    nextDue, daysToDue
+  };
+}
+
+/* ============ MENSAGENS ============ */
+const TONES = [
+  { id: 'amigavel', name: 'Amigável', hint: 'Leve e simpático', text:
+`Oi, {nome}! Tudo bem? 😊
+Passando só para lembrar que a mensalidade da {academia} venceu dia {dia}, no valor de {valor}.
+Quando puder, é só fazer o pagamento. Qualquer coisa, estou por aqui! 💪` },
+  { id: 'lembrete', name: 'Lembrete', hint: 'Direto e neutro', text:
+`Olá, {nome}.
+Lembrete: a sua mensalidade da {academia} ({valor}) venceu no dia {dia} e ainda consta em aberto.
+Se já pagou, por favor me envie o comprovante. Obrigado!` },
+  { id: 'motivacional', name: 'Motivacional', hint: 'Fala do treino', text:
+`E aí, {nome}! 🏋️
+Não deixa nada atrapalhar o seu foco! Sua mensalidade de {valor} venceu dia {dia}.
+Acerta aí para continuarmos firmes nos treinos. Bora! 🔥` },
+  { id: 'firme', name: 'Firme', hint: 'Sério, sem rodeios', text:
+`Olá, {nome}.
+Sua mensalidade da {academia} está atrasada há {diasatraso} dias. Valor em aberto: {total} ({meses}).
+Peço que regularize o pagamento o quanto antes para evitar a suspensão do acesso.` },
+  { id: 'formal', name: 'Formal', hint: 'Educado e profissional', text:
+`Prezado(a) {nome},
+Informamos que consta em aberto o pagamento referente a {meses}, no valor total de {total}.
+Solicitamos, por gentileza, a regularização. Caso o pagamento já tenha sido efetuado, desconsidere esta mensagem.
+Atenciosamente, {academia}.` },
+  { id: 'ultimo', name: 'Último aviso', hint: 'Antes de suspender', text:
+`{nome}, este é o último aviso.
+A mensalidade está em atraso há {diasatraso} dias (total de {total}).
+Sem o pagamento até amanhã, o seu acesso à {academia} será suspenso. Fico no aguardo.` },
+];
+
+function fillMessage(tpl, s) {
+  const st = status(s);
+  const months = st.lateMonths.length ? st.lateMonths : [ymAdd(s.paidUntil, 1)];
+  const mesesTxt = months.map(monthName).join(', ').replace(/, ([^,]*)$/, ' e $1');
+  let msg = tpl
+    .replaceAll('{nome}', s.name.split(' ')[0])
+    .replaceAll('{academia}', db.gym)
+    .replaceAll('{valor}', money(s.value))
+    .replaceAll('{total}', money(st.owed || s.value))
+    .replaceAll('{dia}', pad(s.day))
+    .replaceAll('{meses}', (months.length > 1 ? 'meses de ' : 'mês de ') + mesesTxt)
+    .replaceAll('{diasatraso}', String(st.daysLate));
+  if (db.pix) msg += `\n\nChave Pix: ${db.pix}`;
+  return msg;
+}
+
+function waLink(phone, text) {
+  let n = String(phone).replace(/\D/g, '');
+  if (db.ddi === '55' && (n.length === 10 || n.length === 11)) n = '55' + n;
+  if (db.ddi === '351' && n.length === 9) n = '351' + n;
+  return `https://wa.me/${n}?text=${encodeURIComponent(text)}`;
+}
+
+/* ============ UI BÁSICA ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const initials = n => n.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+let toastT;
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200); }
+function openSheet(html) { $('#sheet').innerHTML = html; $('#sheetBg').classList.add('on'); $('#sheet').scrollTop = 0; }
+function closeSheet() { $('#sheetBg').classList.remove('on'); render(); }
+$('#sheetBg').addEventListener('click', e => { if (e.target.id === 'sheetBg') closeSheet(); });
+
+let tab = 'home';
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + tab));
+  render(); window.scrollTo(0, 0);
+});
+
+function studentRow(s, mode) {
+  const st = status(s);
+  let tag;
+  if (st.late) tag = `<span class="tag late">${st.lateMonths.length > 1 ? st.lateMonths.length + ' meses' : st.daysLate + (st.daysLate === 1 ? ' dia' : ' dias')} · ${money(st.owed)}</span>`;
+  else if (st.daysToDue <= 5) tag = `<span class="tag soon">${st.daysToDue === 0 ? 'Vence hoje' : 'Vence em ' + st.daysToDue + (st.daysToDue === 1 ? ' dia' : ' dias')}</span>`;
+  else tag = `<span class="tag ok">Em dia</span>`;
+  return `<div class="card student ${st.late ? 'late' : ''}" data-id="${s.id}" role="button" tabindex="0">
+    <div class="avatar">${esc(initials(s.name))}</div>
+    <div class="info"><div class="name">${esc(s.name)}</div>
+      <div class="meta">${money(s.value)} · todo dia ${pad(s.day)}</div>
+      <div style="margin-top:4px">${tag}</div></div>
+    ${mode === 'home' && st.late ? `<button class="btn btn-primary btn-small" data-cobrar="${s.id}">Cobrar</button>` : ''}
+  </div>`;
+}
+
+function bindRows(container) {
+  container.querySelectorAll('[data-cobrar]').forEach(b => b.onclick = e => { e.stopPropagation(); startCharge([b.dataset.cobrar]); });
+  container.querySelectorAll('.student').forEach(c => c.onclick = () => showStudent(c.dataset.id));
+}
+
+function render() {
+  $('#gymName').textContent = db.gym;
+  $('#today').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('#fab').classList.toggle('on', tab !== 'settings');
+  const sorted = [...db.students].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+  if (tab === 'home') {
+    const late = sorted.filter(s => status(s).late).sort((a, b) => status(b).daysLate - status(a).daysLate);
+    const soon = sorted.filter(s => { const st = status(s); return !st.late && st.daysToDue <= 5; }).sort((a, b) => status(a).daysToDue - status(b).daysToDue);
+    $('#sumLateCount').textContent = late.length;
+    $('#sumLateValue').textContent = money(late.reduce((t, s) => t + status(s).owed, 0));
+    $('#btnCobrarTodos').style.display = late.length ? '' : 'none';
+    $('#lateList').innerHTML = !db.students.length
+      ? `<div class="card empty"><div class="emoji">👋</div><p><b>Bem-vindo!</b><br>Toque no <b>+</b> para cadastrar o primeiro aluno.</p></div>`
+      : late.length ? late.map(s => studentRow(s, 'home')).join('') : `<div class="card empty"><div class="emoji">🎉</div><p>Ninguém devendo. Tudo em dia!</p></div>`;
+    $('#soonList').innerHTML = soon.length ? soon.map(s => studentRow(s, 'soon')).join('') : `<p class="label" style="margin:0 4px">Nenhum vencimento próximo.</p>`;
+    bindRows($('#v-home'));
+  }
+  if (tab === 'students') {
+    const q = $('#search').value.trim().toLowerCase();
+    const list = sorted.filter(s => s.name.toLowerCase().includes(q));
+    $('#allList').innerHTML = !db.students.length
+      ? `<div class="card empty"><div class="emoji">👥</div><p>Nenhum aluno ainda.<br>Toque no <b>+</b> para adicionar.</p></div>`
+      : (list.length ? `<p class="label" style="margin:0 4px 8px">${db.students.length} aluno(s) · toque em um para ver detalhes</p>` + list.map(s => studentRow(s, 'list')).join('') : `<p class="empty">Nenhum aluno encontrado.</p>`);
+    bindRows($('#allList'));
+  }
+  if (tab === 'settings') { $('#setGym').value = db.gym; $('#setPix').value = db.pix; $('#setDdi').value = db.ddi; }
+}
+$('#search').oninput = render;
+
+/* ============ CADASTRO ============ */
+function todayStr() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+
+function showForm(id) {
+  const s = db.students.find(x => x.id === id);
+  const editing = !!s;
+  openSheet(`
+    <div class="sheet-head"><h2>${editing ? 'Editar aluno' : 'Novo aluno'}</h2><button class="x" onclick="closeSheet()">✕</button></div>
+    <form id="studentForm">
+      <div class="field"><label>Nome completo</label><input name="name" required placeholder="Ex: João da Silva" value="${editing ? esc(s.name) : ''}"></div>
+      <div class="field"><label>WhatsApp</label><input name="phone" type="tel" inputmode="tel" required placeholder="(11) 99999-9999" value="${editing ? esc(s.phone) : ''}"><small>Com DDD. É para este número que vai a cobrança.</small></div>
+      <div class="row">
+        <div class="field"><label>Valor (R$)</label><input name="value" type="number" inputmode="decimal" step="0.01" min="0" required placeholder="100" value="${editing ? s.value : ''}"></div>
+        <div class="field"><label>Dia do pagamento</label><input name="day" type="number" inputmode="numeric" min="1" max="31" required placeholder="10" value="${editing ? s.day : ''}"></div>
+      </div>
+      <div class="field"><label>Data da matrícula</label><input name="joined" type="date" required value="${editing ? s.joined : todayStr()}"></div>
+      ${editing ? '' : `<label class="check"><input type="checkbox" name="paidNow" checked> Já pagou a mensalidade deste mês</label>`}
+      <button class="btn btn-primary" type="submit" style="margin-top:8px">${editing ? 'Salvar alterações' : 'Cadastrar aluno'}</button>
+    </form>`);
+  $('#studentForm').onsubmit = e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const data = {
+      name: f.get('name').trim(), phone: f.get('phone').trim(),
+      value: Number(f.get('value')), day: Math.min(31, Math.max(1, Number(f.get('day')))), joined: f.get('joined')
+    };
+    if (editing) Object.assign(s, data);
+    else {
+      const cur = ym(new Date());
+      db.students.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ...data,
+        paidUntil: f.get('paidNow') ? cur : ymAdd(cur, -1), history: f.get('paidNow') ? [{ month: cur, date: todayStr(), value: data.value }] : [], lastCharge: null });
+    }
+    save(); closeSheet(); toast(editing ? 'Alterações salvas' : 'Aluno cadastrado ✔');
+  };
+}
+$('#fab').onclick = () => showForm();
+
+function showStudent(id) {
+  const s = db.students.find(x => x.id === id); if (!s) return;
+  const st = status(s);
+  openSheet(`
+    <div class="sheet-head"><h2>${esc(s.name)}</h2><button class="x" onclick="closeSheet()">✕</button></div>
+    <div class="card">
+      <div class="detail-line"><span>Situação</span><span>${st.late ? `<span class="tag late">Devendo ${money(st.owed)}</span>` : '<span class="tag ok">Em dia</span>'}</span></div>
+      <div class="detail-line"><span>Valor mensal</span><b>${money(s.value)}</b></div>
+      <div class="detail-line"><span>Dia do pagamento</span><b>Todo dia ${pad(s.day)}</b></div>
+      <div class="detail-line"><span>Matrícula</span><b>${fmtDate(s.joined)}</b></div>
+      <div class="detail-line"><span>Pago até</span><b style="text-transform:capitalize">${monthName(s.paidUntil)} ${s.paidUntil.slice(0, 4)}</b></div>
+      <div class="detail-line"><span>WhatsApp</span><b>${esc(s.phone)}</b></div>
+      ${s.lastCharge ? `<div class="detail-line"><span>Última cobrança</span><b>${fmtDate(s.lastCharge)}</b></div>` : ''}
+    </div>
+    <div class="stack">
+      <button class="btn btn-primary" id="dPay">✅ Registrar pagamento${st.lateMonths.length > 1 ? ' (1 mês)' : ''}</button>
+      ${st.late ? `<button class="btn btn-ghost" id="dCharge">💬 Enviar cobrança</button>` : ''}
+      <div class="row"><button class="btn btn-ghost" id="dEdit">✏️ Editar</button><button class="btn btn-danger" id="dDel">🗑️ Excluir</button></div>
+    </div>`);
+  $('#dPay').onclick = () => {
+    const m = ymAdd(s.paidUntil, 1);
+    s.paidUntil = m; (s.history = s.history || []).push({ month: m, date: todayStr(), value: s.value });
+    save(); toast(`Pagamento de ${monthName(m)} registrado ✔`); showStudent(id);
+  };
+  if ($('#dCharge')) $('#dCharge').onclick = () => startCharge([id]);
+  $('#dEdit').onclick = () => showForm(id);
+  $('#dDel').onclick = () => {
+    if (confirm(`Excluir ${s.name}? Isso não pode ser desfeito.`)) {
+      db.students = db.students.filter(x => x.id !== id); save(); closeSheet(); toast('Aluno excluído');
+    }
+  };
+}
+
+/* ============ COBRANÇA ============ */
+let charge = null;
+
+function startCharge(ids) {
+  charge = { ids, selected: new Set(ids), tone: TONES[0].id, text: TONES[0].text, step: 'pick', i: 0 };
+  renderCharge();
+}
+$('#btnCobrarTodos').onclick = () => startCharge(db.students.filter(s => status(s).late).map(s => s.id));
+
+function renderCharge() {
+  const people = charge.ids.map(id => db.students.find(s => s.id === id)).filter(Boolean);
+  if (charge.step === 'pick') {
+    const sample = people[0];
+    openSheet(`
+      <div class="sheet-head"><h2>Escolha a mensagem</h2><button class="x" onclick="closeSheet()">✕</button></div>
+      <div class="tones">${TONES.map(t => `<button class="tone ${t.id === charge.tone ? 'on' : ''}" data-tone="${t.id}"><b>${t.name}</b><span>${t.hint}</span></button>`).join('')}</div>
+      <div class="field"><label>Texto (pode editar)</label><textarea id="tplText">${esc(charge.text)}</textarea>
+        <small>Palavras entre { } são trocadas automaticamente: {nome}, {valor}, {dia}, {total}, {meses}, {diasatraso}, {academia}</small></div>
+      <div class="label" style="margin:0 4px 6px">Como vai ficar para ${esc(sample.name.split(' ')[0])}:</div>
+      <div class="preview" id="pv"></div>
+      ${people.length > 1 ? `<div class="section-title" style="margin-top:4px">Enviar para (${people.length})</div>
+      <div class="card" style="padding:4px 12px">${people.map(p => `<label class="check"><input type="checkbox" data-sel="${p.id}" ${charge.selected.has(p.id) ? 'checked' : ''}> ${esc(p.name)} <span class="label" style="margin-left:auto">${money(status(p).owed)}</span></label>`).join('')}</div>` : ''}
+      <button class="btn btn-primary" id="goSend">Começar envio →</button>`);
+    const upd = () => { charge.text = $('#tplText').value; $('#pv').textContent = fillMessage(charge.text, sample); };
+    upd();
+    $('#tplText').oninput = upd;
+    document.querySelectorAll('[data-tone]').forEach(b => b.onclick = () => { charge.tone = b.dataset.tone; charge.text = TONES.find(t => t.id === charge.tone).text; renderCharge(); });
+    document.querySelectorAll('[data-sel]').forEach(c => c.onchange = () => { c.checked ? charge.selected.add(c.dataset.sel) : charge.selected.delete(c.dataset.sel); });
+    $('#goSend').onclick = () => {
+      charge.queue = charge.ids.filter(id => charge.selected.has(id));
+      if (!charge.queue.length) return toast('Selecione pelo menos um aluno');
+      charge.step = 'send'; charge.i = 0; renderCharge();
+    };
+  } else if (charge.step === 'send') {
+    const q = charge.queue;
+    if (charge.i >= q.length) {
+      openSheet(`<div class="empty"><div class="emoji">✅</div><h2>Pronto!</h2><p>${q.length} cobrança(s) enviada(s).</p></div>
+        <button class="btn btn-primary" onclick="closeSheet()">Voltar ao início</button>`);
+      return;
+    }
+    const s = db.students.find(x => x.id === q[charge.i]);
+    const msg = fillMessage(charge.text, s);
+    openSheet(`
+      <div class="sheet-head"><h2>Enviando ${charge.i + 1} de ${q.length}</h2><button class="x" onclick="closeSheet()">✕</button></div>
+      <div class="progress"><div style="width:${(charge.i / q.length) * 100}%"></div></div>
+      <div class="card student late" style="margin-bottom:12px"><div class="avatar">${esc(initials(s.name))}</div>
+        <div class="info"><div class="name">${esc(s.name)}</div><div class="meta">${esc(s.phone)} · ${money(status(s).owed)}</div></div></div>
+      <div class="preview">${esc(msg)}</div>
+      <div class="stack">
+        <a class="btn btn-primary" id="openWa" href="${waLink(s.phone, msg)}" target="_blank" rel="noopener" style="text-decoration:none">🟢 Abrir no WhatsApp e enviar</a>
+        <button class="btn btn-ghost" id="skip">Pular este aluno</button>
+      </div>
+      <p class="label" style="text-align:center">O WhatsApp abre com a mensagem pronta. Toque em <b>enviar</b> lá e volte aqui — o próximo aluno aparece sozinho.</p>`);
+    $('#openWa').onclick = () => {
+      s.lastCharge = todayStr(); save();
+      setTimeout(() => { charge.i++; renderCharge(); }, 800);
+    };
+    $('#skip').onclick = () => { charge.i++; renderCharge(); };
+  }
+}
+
+/* ============ AJUSTES / BACKUP ============ */
+$('#btnSaveSettings').onclick = () => {
+  db.gym = $('#setGym').value.trim() || 'Minha Academia'; db.pix = $('#setPix').value.trim(); db.ddi = $('#setDdi').value;
+  save(); render(); toast('Ajustes salvos ✔');
+};
+$('#btnExport').onclick = () => {
+  const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `alunos-${todayStr()}.json`; a.click();
+  toast('Cópia salva');
+};
+$('#btnImport').onclick = () => $('#fileImport').click();
+$('#fileImport').onchange = async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data.students)) throw 0;
+    if (!confirm(`Restaurar ${data.students.length} aluno(s)? Os dados atuais serão substituídos.`)) return;
+    db = Object.assign({}, defaults, data); save(); render(); toast('Cópia restaurada ✔');
+  } catch (_) { toast('Arquivo inválido'); }
+  e.target.value = '';
+};
+
+render();
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
